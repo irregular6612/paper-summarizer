@@ -21,6 +21,12 @@ from marker.config.parser import ConfigParser
 logger = logging.getLogger(__name__)
 
 
+def strip_html_tags(text: str) -> str:
+    """HTML 태그를 제거합니다 (예: <span id="page-0-0"></span>, <sup>, <sub>)."""
+    cleaned = re.sub(r"</?(?:span|div|sup|sub|br|p|a|b|i|em|strong|img|table|tr|td|th|ul|ol|li|h[1-6])\b[^>]*>", "", text)
+    return cleaned.strip()
+
+
 @dataclass
 class Section:
     """논문 섹션 정보"""
@@ -164,7 +170,7 @@ class PDFExtractor:
         # 첫 번째 # 헤더 찾기
         match = re.search(r"^#\s+(.+)$", markdown, re.MULTILINE)
         if match:
-            return match.group(1).strip()
+            return strip_html_tags(match.group(1).strip())
 
         # 실패시 파일명에서 추출
         return pdf_path.stem
@@ -176,7 +182,7 @@ class PDFExtractor:
 
         for match in re.finditer(pattern, markdown, re.MULTILINE):
             level = len(match.group(1))
-            title = match.group(2).strip()
+            title = strip_html_tags(match.group(2).strip())
             sections.append(Section(title=title, level=level))
 
         return sections

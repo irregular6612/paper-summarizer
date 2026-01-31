@@ -162,18 +162,10 @@ class MarkdownGenerator:
 
     def _format_summary(self, label: str, summary: str) -> str:
         """요약을 포맷팅합니다."""
-        if self.config.summary_style == "callout":
-            # Obsidian callout 스타일
-            lines = [f"> [!note] {label}"]
-            for line in summary.split("\n"):
-                lines.append(f"> {line}")
-            return "\n".join(lines)
-        else:
-            # 기본 blockquote 스타일
-            lines = [f"> **[{label}]**"]
-            for line in summary.split("\n"):
-                lines.append(f"> {line}")
-            return "\n".join(lines)
+        lines = [f"> [!note] {label}"]
+        for line in summary.split("\n"):
+            lines.append(f"> {line}")
+        return "\n".join(lines)
 
 
 def generate_markdown(

@@ -5,7 +5,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from .config import AppConfig
-from .extractor import get_extractor, PaperStructure
+from .extractor import get_extractor, PaperStructure, strip_html_tags
 from .image_export import ImageExporter, create_short_paper_name, sanitize_filename
 from .summarizer import Summarizer, SummaryConfig
 from .markdown_gen import (
@@ -42,7 +42,7 @@ class PaperPipeline:
                 temperature=self.config.llm.temperature,
                 max_tokens=self.config.llm.max_tokens,
                 language=self.config.output.summary_language,
-                max_sections=getattr(self.config.llm, 'max_sections', 15),
+                max_sections=getattr(self.config.llm, 'max_sections', 999),
             )
         )
 
@@ -79,6 +79,9 @@ class PaperPipeline:
             f"{len(structure.figures)} figures, {len(structure.tables)} tables, "
             f"{len(structure.images)} images"
         )
+
+        # HTML 태그 제거 (marker-pdf가 생성하는 <span> 등)
+        structure.markdown = strip_html_tags(structure.markdown) if structure.markdown else ""
 
         # 출력 디렉토리 설정
         paper_name = self._sanitize_filename(structure.title or pdf_path.stem)
@@ -151,7 +154,7 @@ class PaperPipeline:
 
         # 3. 전체 요약 (있는 경우)
         if "overview" in summaries:
-            parts.append(self._format_summary("Overview", summaries["overview"]))
+            parts.append(self._format_summary("summary", summaries["overview"], "Overview"))
             parts.append("")
 
         # 4. 목차
@@ -163,6 +166,10 @@ class PaperPipeline:
 
         # 6. 섹션별 요약 추가
         enhanced_md = self._add_summaries_to_markdown(enhanced_md, summaries, structure)
+
+        # 7. References 섹션 제거
+        enhanced_md = self._remove_references_section(enhanced_md)
+
         parts.append(enhanced_md)
 
         return "\n".join(parts)
@@ -272,7 +279,7 @@ class PaperPipeline:
         # 각 섹션 제목 뒤에 요약 추가
         for section in structure.sections:
             if section.title in summaries:
-                summary_block = self._format_summary("요약", summaries[section.title])
+                summary_block = self._format_summary("note", summaries[section.title], "Summary")
                 # replacement 문자열에서 백슬래시 이스케이프 (re.sub에서 \가 특수 의미를 가짐)
                 safe_summary = summary_block.replace("\\", "\\\\")
                 # 섹션 제목 찾아서 요약 추가
@@ -289,18 +296,25 @@ class PaperPipeline:
         logger.info(f"     Inserted {inserted_count} section summaries")
         return result
 
-    def _format_summary(self, label: str, summary: str) -> str:
-        """요약을 포맷팅합니다."""
-        if self.config.markdown.summary_style == "callout":
-            lines = [f"> [!note] {label}"]
-            for line in summary.split("\n"):
-                lines.append(f"> {line}")
-            return "\n".join(lines)
-        else:
-            lines = [f"> **[{label}]**"]
-            for line in summary.split("\n"):
-                lines.append(f"> {line}")
-            return "\n".join(lines)
+    def _format_summary(self, callout_type: str, summary: str, title: str = "") -> str:
+        """요약을 포맷팅합니다.
+
+        Args:
+            callout_type: Obsidian callout type (note, summary, important, warning, question)
+            summary: 요약 내용
+            title: callout 제목 (optional)
+        """
+        header = f"> [!{callout_type}] {title}" if title else f"> [!{callout_type}]"
+        lines = [header]
+        for line in summary.split("\n"):
+            lines.append(f"> {line}")
+        return "\n".join(lines)
+
+    def _remove_references_section(self, markdown: str) -> str:
+        """References/Bibliography 섹션과 그 이후 내용을 제거합니다."""
+        import re
+        pattern = r"\n#{1,6}\s+(References|Bibliography|참고\s*문헌)\s*\n.*"
+        return re.sub(pattern, "", markdown, flags=re.DOTALL | re.IGNORECASE)
 
     def _sanitize_filename(self, name: str) -> str:
         """파일명으로 사용할 수 없는 문자를 제거합니다."""

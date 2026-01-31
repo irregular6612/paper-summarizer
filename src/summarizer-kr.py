@@ -43,8 +43,8 @@ SECTION_SUMMARY_PROMPT = """# 작업
   (1) 이 섹션의 핵심 목적/주장
   (2) 제안된 방법/접근법
   (3) 주요 결과/의의 (수치, 벤치마크가 있으면 반드시 포함)
-- 내용이 짧은 섹션은 1-3개 bullet point로 간결하게
-- 내용이 긴 섹션은 최대 5-7개 bullet point
+- 내용이 짧은 섹션은 1-5개 bullet point로 간결하게
+- 내용이 긴 섹션은 최대 5-10개 bullet point
 - 마크다운 heading(#, ##, ### 등) 사용 금지
 - 이전 섹션과의 연결성을 고려하여 요약"""
 
@@ -64,7 +64,7 @@ MARKDOWN_SUMMARY_PROMPT = """# 작업
 # {language} 요약"""
 
 PAPER_OVERVIEW_PROMPT = """# 작업
-논문 전체의 핵심을 **반드시 {language}로만** bullet point 5-7개로 요약하세요.
+논문 전체의 핵심을 **반드시 {language}로만** bullet point 5-10개로 요약하세요.
 
 # 논문 정보
 - 제목: {title}
@@ -73,7 +73,7 @@ PAPER_OVERVIEW_PROMPT = """# 작업
 
 # 출력 요구사항
 - 언어: **{language}** (영어로 작성 금지, 기술 용어만 영어 허용)
-- 반드시 bullet point(`-`) 형식으로 5-7개 작성
+- 반드시 bullet point(`-`) 형식으로 5-10개 작성
 - 마크다운 heading(#, ##, ### 등) 절대 사용 금지
 - 다음 순서로 구성:
   (1) 연구 동기/배경 (1개)

@@ -28,40 +28,37 @@ class SummaryConfig:
 
 
 # 프롬프트 템플릿
-# 프롬프트 템플릿
 
 SECTION_SUMMARY_PROMPT = """# TASK
-Summarize the following paper section into a structured format for a {language} researcher.
+Summarize the following paper section for a {language} researcher.
 
 {context}
 # SECTION INFO
-- Title: {title}
+- Section Title: "{title}"
 - Content:
 {content}
 
 # CRITICAL RULES
-1. **LANGUAGE:** Write the summary **ONLY in {language}**.
-   - DO NOT generate English sentences.
-   - Exception: Keep technical terms in English (e.g., Transformer, PPO, Zero-shot).
+1. **LANGUAGE:** Write **ONLY in {language}**. Technical terms in English allowed.
 2. **FORMAT:**
-   - Use bullet points (`-`) strictly.
+   - Write in **prose (줄글)** style — natural flowing sentences, NOT bullet points.
    - **NO Markdown Headings** (`#`, `##`) are allowed.
    - Use **Bold text** for key concepts.
-3. **STRUCTURE:**
-   - (1) Core Purpose/Argument of this section
-   - (2) Proposed Method/Approach
-   - (3) Key Results/Significance (MUST include specific numbers/metrics if available)
+3. **ADAPTIVITY:**
+   - Adapt your summary style to match the section's nature.
+   - For example: "Introduction" → focus on motivation and problem statement;
+     "Methods" → focus on proposed approach and technical details;
+     "Experiments/Results" → focus on benchmarks, metrics, and comparisons;
+     "Related Work" → focus on positioning against prior work;
+     "Discussion/Conclusion" → focus on implications and limitations.
+   - If specific numbers/metrics are present, MUST include them.
 4. **LENGTH:**
-   - Short section: 1-3 bullet points.
-   - Long section: 5-7 bullet points max.
+   - Short section (< 500 words): 2-4 sentences.
+   - Long section (≥ 500 words): 5-8 sentences max.
 5. **CONTEXT:** Ensure continuity with the previous section summary.
 
-# OUTPUT EXAMPLE (Follow this style)
-- **핵심 목표**: 기존 Attention 메커니즘의 연산 효율성 문제 제기
-- **제안 방법**: 
-  - $O(N^2)$ 복잡도를 $O(N)$으로 줄이는 Linear Attention 도입
-  - 커널 함수 $\phi(\cdot)$를 사용하여 행렬 곱 순서 변경
-- **결과**: 기존 대비 학습 속도 2.5배 향상"""
+# OUTPUT EXAMPLE
+이 섹션에서는 기존 Attention 메커니즘의 $O(N^2)$ 연산 복잡도 문제를 지적하고, 이를 $O(N)$으로 줄이는 **Linear Attention**을 제안한다. 핵심 아이디어는 커널 함수 $\\phi(\\cdot)$를 활용하여 행렬 곱 연산 순서를 변경하는 것이며, 이를 통해 기존 대비 학습 속도가 2.5배 향상되었다."""
 
 MARKDOWN_SUMMARY_PROMPT = """# TASK
 Summarize each main section of the provided markdown paper.
@@ -95,7 +92,7 @@ Synthesize a comprehensive overview of the entire paper based on the section sum
 2. **FORMAT:**
    - Use bullet points (`-`) strictly.
    - **NO Markdown Headings** (`#`, `##`) are allowed.
-3. **STRUCTURE (Strict Order, 5-7 bullets total):**
+3. **STRUCTURE (Strict Order, 5-10 bullets total):**
    (1) Research Motivation/Background (1 bullet)
    (2) Core Methodology (1-2 bullets)
    (3) Key Contributions (1-2 bullets)
@@ -132,7 +129,6 @@ Extract metadata from the beginning of the paper text.
 
 
 
-litellm.set_verbose = True # for debugging.
 
 class Summarizer:
     """LLM을 사용하여 논문을 요약하는 클래스"""
@@ -164,42 +160,36 @@ class Summarizer:
             return model
 
 
-    def get_system_prompt(self) -> str: # edited by irregular6612(w/ Gemini 3 Pro)
+    def get_system_prompt(self) -> str:
         """시스템 프롬프트를 반환합니다."""
         return f"""# ROLE
 You are a senior researcher and expert in summarizing academic papers in ML/AI/CS (Deep Learning, RL, CV, NLP).
 
 # TASK
-Analyze the given paper section and summarize it effectively for a Korean researcher.
+Analyze the given paper content and summarize it effectively for a Korean researcher.
 
 # CRITICAL RULES (MUST FOLLOW)
 1. **OUTPUT LANGUAGE:** You must write the summary **ONLY in {self.config.language} (Korean).**
    - DO NOT write the summary in English.
    - Exception: Keep technical terms in English (e.g., Transformer, PPO, Zero-shot, Backbone).
 2. **FORMAT:**
-   - Use bullet points (`-`) strictly.
+   - Write in **prose (줄글)** style — natural flowing paragraph, NOT bullet points.
    - **NO Markdown Headings** (`#`, `##`) are allowed. They conflict with the user's document structure.
-   - Use **Bold text** for keywords instead of headings.
+   - Use **Bold text** for key concepts.
 3. **CONTENT:**
-   - Capture the core contribution, methodology, and quantitative results ($R^2$, Accuracy, etc.).
+   - Capture the core contribution, methodology, and quantitative results.
    - Be concise and professional. No introductory filler words.
 4. **MATHEMATICS:** Keep raw LaTeX format (e.g., $\\alpha$, $L_{{total}}$).
 
-# OUTPUT STYLE EXAMPLE
-- **핵심 목표**: 기존 LLM의 환각 현상을 해결하기 위한 새로운 손실 함수 제안
-- **방법론**: 
-    - RLHF 단계에서 PPO 대신 DPO를 변형한 알고리즘 적용
-    - 데이터셋 $D_{{train}}$에 대해 노이즈를 추가하여 강건성 테스트 진행
-- **실험 결과**: 기존 모델 대비 정확도 15% 향상 (Table 2 참조)
-
 # REMINDER
 - Output **MUST** be in Korean.
-- Do not use `#` headings."""
+- Do not use `#` headings.
+- Write in prose, not bullet points."""
 
     def _call_llm(self, prompt: str) -> str:
         """LLM을 호출하여 응답을 받습니다."""
         model_name = self._get_model_name()
-        system_prompt = self._get_system_prompt()
+        system_prompt = self.get_system_prompt()
 
         kwargs = {
             "model": model_name,
@@ -316,7 +306,7 @@ Analyze the given paper section and summarize it effectively for a Korean resear
                 section_content = self._extract_section_content(
                     structure.markdown, section.title
                 )
-                if section_content and len(section_content) > 150:
+                if section_content:
                     sections_to_summarize.append((section, section_content))
 
             # 배치별 병렬 처리

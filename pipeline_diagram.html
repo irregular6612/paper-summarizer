@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paper Summary Pipeline - Architecture Diagram</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #eee;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            color: #00d4ff;
+            margin-bottom: 10px;
+            font-size: 2.2em;
+            text-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
+        }
+        .subtitle {
+            text-align: center;
+            color: #888;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+        .diagram-section {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .diagram-section h2 {
+            color: #ff6b6b;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid rgba(255, 107, 107, 0.3);
+        }
+        .mermaid {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            padding: 20px;
+            overflow-x: auto;
+        }
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+        }
+        .file-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .file-card {
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 20px;
+            border-left: 4px solid #00d4ff;
+        }
+        .file-card h3 {
+            color: #00d4ff;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+        .file-card code {
+            background: rgba(0, 212, 255, 0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #7dd3fc;
+        }
+        .file-card ul {
+            margin-left: 20px;
+            margin-top: 10px;
+        }
+        .file-card li {
+            margin-bottom: 5px;
+            color: #ccc;
+        }
+        .ollama-highlight {
+            background: linear-gradient(90deg, rgba(255, 107, 107, 0.2), rgba(255, 217, 61, 0.2));
+            border-left: 4px solid #ff6b6b;
+        }
+        .ollama-highlight h3 {
+            color: #ff6b6b;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📄 Paper Summary Pipeline</h1>
+        <p class="subtitle">논문 PDF → Obsidian 마크다운 변환 시스템 아키텍처</p>
+
+        <!-- 전체 시스템 아키텍처 -->
+        <div class="diagram-section">
+            <h2>🏗️ 전체 시스템 아키텍처</h2>
+            <div class="mermaid">
+flowchart TB
+    subgraph INPUT["📥 입력"]
+        PDF["📄 PDF 파일"]
+        CONFIG["⚙️ config.yaml"]
+    end
+
+    subgraph MAIN["🚀 main.py - CLI 진입점"]
+        direction TB
+        CMD_PROCESS["process<br/><small>단일 PDF 처리</small>"]
+        CMD_ALL["process-all<br/><small>폴더 내 모든 PDF</small>"]
+        CMD_WATCH["watch<br/><small>폴더 감시 모드</small>"]
+        CMD_INIT["init<br/><small>설정 파일 생성</small>"]
+    end
+
+    subgraph PIPELINE["⚡ pipeline.py - PaperPipeline"]
+        direction TB
+        STEP1["<b>1/4</b> PDF 구조 추출"]
+
+        subgraph PARALLEL["🔀 병렬 처리 (ThreadPoolExecutor)"]
+            STEP2["<b>2/4</b> 이미지 내보내기"]
+            STEP3["<b>3/4</b> LLM 요약 생성"]
+            META["메타데이터 추출"]
+        end
+
+        STEP4["<b>4/4</b> 마크다운 생성"]
+
+        STEP1 --> PARALLEL
+        PARALLEL --> STEP4
+    end
+
+    subgraph MODULES["📦 핵심 모듈"]
+        EXT["extractor.py<br/><small>PDFExtractor</small>"]
+        IMG["image_export.py<br/><small>ImageExporter</small>"]
+        SUM["summarizer.py<br/><small>Summarizer</small>"]
+        MD["markdown_gen.py<br/><small>MarkdownGenerator</small>"]
+        WATCH["watcher.py<br/><small>FolderWatcher</small>"]
+    end
+
+    subgraph EXTERNAL["🔌 외부 의존성"]
+        MARKER["marker-pdf<br/><small>PDF 파싱</small>"]
+        LITELLM["litellm<br/><small>LLM 통합</small>"]
+        OLLAMA["🦙 <b>Ollama</b><br/><small>qwen3:14b</small>"]
+        WATCHDOG["watchdog<br/><small>파일 감시</small>"]
+    end
+
+    subgraph OUTPUT["📤 출력"]
+        MD_FILE["📝 Obsidian 마크다운"]
+        ASSETS["🖼️ assets/ 폴더<br/><small>Figure, Table 이미지</small>"]
+    end
+
+    PDF --> MAIN
+    CONFIG --> MAIN
+    MAIN --> PIPELINE
+
+    STEP1 -.-> EXT
+    STEP2 -.-> IMG
+    STEP3 -.-> SUM
+    META -.-> SUM
+    STEP4 -.-> MD
+    CMD_WATCH -.-> WATCH
+
+    EXT --> MARKER
+    SUM --> LITELLM
+    LITELLM --> OLLAMA
+    WATCH --> WATCHDOG
+
+    PIPELINE --> OUTPUT
+
+    style OLLAMA fill:#ff6b6b,stroke:#ff4757,stroke-width:3px,color:#fff
+    style STEP3 fill:#ffe066,stroke:#ffd43b,stroke-width:2px
+    style META fill:#ffe066,stroke:#ffd43b,stroke-width:2px
+    style PARALLEL fill:#e3f2fd,stroke:#64b5f6
+            </div>
+        </div>
+
+        <!-- 상세 처리 흐름 -->
+        <div class="diagram-section">
+            <h2>🔄 상세 처리 흐름 (process 명령)</h2>
+            <div class="mermaid">
+flowchart LR
+    subgraph EXTRACT["<b>1단계: 추출</b><br/>extractor.py"]
+        direction TB
+        E1["PDF 로드"]
+        E2["marker-pdf 변환"]
+        E3["PaperStructure 생성"]
+        E1 --> E2 --> E3
+    end
+
+    subgraph PARALLEL["<b>2-3단계: 병렬 처리</b>"]
+        direction TB
+        subgraph IMG["image_export.py"]
+            I1["이미지 bytes 추출"]
+            I2["파일명 생성"]
+            I3["assets/에 저장"]
+            I1 --> I2 --> I3
+        end
+
+        subgraph SUM["summarizer.py"]
+            S1["섹션별 요약<br/><small>SECTION_SUMMARY_PROMPT</small>"]
+            S2["전체 개요<br/><small>PAPER_OVERVIEW_PROMPT</small>"]
+            S3["메타데이터 추출<br/><small>METADATA_EXTRACT_PROMPT</small>"]
+        end
+
+        subgraph OLL["🦙 <b>Ollama API</b>"]
+            O1["litellm.completion()"]
+            O2["ollama/qwen3:14b"]
+            O1 --> O2
+        end
+
+        S1 & S2 & S3 --> O1
+    end
+
+    subgraph GENERATE["<b>4단계: 생성</b><br/>markdown_gen.py"]
+        direction TB
+        G1["Frontmatter 생성"]
+        G2["목차 생성"]
+        G3["섹션별 요약 삽입"]
+        G4["이미지 링크 교체"]
+        G1 --> G2 --> G3 --> G4
+    end
+
+    subgraph OUT["<b>출력</b>"]
+        direction TB
+        O_MD["📝 {paper_name}.md"]
+        O_IMG["🖼️ assets/*.png"]
+    end
+
+    EXTRACT --> PARALLEL
+    PARALLEL --> GENERATE
+    GENERATE --> OUT
+
+    style OLL fill:#ff6b6b,stroke:#ff4757,stroke-width:3px
+    style O2 fill:#ff4757,color:#fff
+            </div>
+        </div>
+
+        <!-- Ollama 연동 상세 -->
+        <div class="diagram-section">
+            <h2>🦙 Ollama LLM 연동 상세</h2>
+            <div class="mermaid">
+sequenceDiagram
+    autonumber
+    participant P as pipeline.py
+    participant S as summarizer.py
+    participant L as litellm
+    participant O as 🦙 Ollama<br/>(localhost:11434)
+
+    Note over P,O: 논문 처리 시작
+
+    P->>S: summarize_paper(structure)
+
+    rect rgb(255, 230, 230)
+        Note over S,O: 전체 개요 요약
+        S->>S: PAPER_OVERVIEW_PROMPT 생성
+        S->>L: completion(model="ollama/qwen3:14b")
+        L->>O: POST /api/chat
+        O-->>L: 한국어 요약 응답
+        L-->>S: response.choices[0].message.content
+    end
+
+    rect rgb(230, 255, 230)
+        Note over S,O: 섹션별 요약 (배치 병렬)
+        loop 배치당 3개 섹션
+            S->>S: SECTION_SUMMARY_PROMPT 생성
+            par 병렬 요청
+                S->>L: completion() #1
+                S->>L: completion() #2
+                S->>L: completion() #3
+            end
+            L->>O: 3개 동시 요청
+            O-->>L: 응답들
+            L-->>S: 요약 결과들
+        end
+    end
+
+    rect rgb(230, 230, 255)
+        Note over S,O: 메타데이터 추출
+        S->>S: METADATA_EXTRACT_PROMPT 생성
+        S->>L: completion()
+        L->>O: POST /api/chat
+        O-->>L: JSON 응답
+        L-->>S: {authors, journal, year}
+    end
+
+    S-->>P: summaries dict 반환
+            </div>
+        </div>
+
+        <!-- 파일 구조 -->
+        <div class="diagram-section">
+            <h2>📁 파일 구조 및 함수</h2>
+            <div class="file-details">
+                <div class="file-card">
+                    <h3>📄 main.py</h3>
+                    <p>CLI 진입점 및 명령어 라우팅</p>
+                    <ul>
+                        <li><code>main()</code> - argparse 설정</li>
+                        <li><code>cmd_process(args)</code> - 단일 PDF</li>
+                        <li><code>cmd_process_all(args)</code> - 폴더 전체</li>
+                        <li><code>cmd_watch(args)</code> - 감시 모드</li>
+                        <li><code>cmd_init(args)</code> - 설정 생성</li>
+                        <li><code>warmup_models()</code> - 모델 프리로드</li>
+                    </ul>
+                </div>
+
+                <div class="file-card">
+                    <h3>📄 src/pipeline.py</h3>
+                    <p>핵심 파이프라인 - PaperPipeline 클래스</p>
+                    <ul>
+                        <li><code>__init__(config)</code> - 모듈 초기화</li>
+                        <li><code>process(pdf_path)</code> - 4단계 처리</li>
+                        <li><code>_generate_enhanced_markdown()</code></li>
+                        <li><code>_generate_frontmatter()</code></li>
+                        <li><code>_generate_toc()</code></li>
+                        <li><code>_replace_image_links()</code></li>
+                        <li><code>_add_summaries_to_markdown()</code></li>
+                    </ul>
+                </div>
+
+                <div class="file-card">
+                    <h3>📄 src/extractor.py</h3>
+                    <p>marker-pdf 기반 PDF 파싱</p>
+                    <ul>
+                        <li><code>PDFExtractor</code> 클래스 (싱글톤)</li>
+                        <li><code>extract(pdf_path)</code> → PaperStructure</li>
+                        <li><code>get_extractor()</code> - 싱글톤 반환</li>
+                        <li><code>warmup_extractor()</code> - 모델 프리로드</li>
+                    </ul>
+                    <p style="margin-top:10px"><b>출력:</b> PaperStructure</p>
+                    <ul>
+                        <li>title, markdown, sections[]</li>
+                        <li>figures[], tables[], images{}</li>
+                    </ul>
+                </div>
+
+                <div class="file-card ollama-highlight">
+                    <h3>🦙 src/summarizer.py</h3>
+                    <p><b>Ollama 연동</b> - litellm 기반 LLM 요약</p>
+                    <ul>
+                        <li><code>Summarizer</code> 클래스</li>
+                        <li><code>_call_llm(prompt)</code> - LLM 호출</li>
+                        <li><code>summarize_paper(structure)</code></li>
+                        <li><code>summarize_section(section)</code></li>
+                        <li><code>extract_metadata(structure)</code></li>
+                        <li><code>_summarize_from_markdown()</code></li>
+                    </ul>
+                    <p style="margin-top:10px"><b>프롬프트:</b></p>
+                    <ul>
+                        <li><code>SECTION_SUMMARY_PROMPT</code></li>
+                        <li><code>PAPER_OVERVIEW_PROMPT</code></li>
+                        <li><code>METADATA_EXTRACT_PROMPT</code></li>
+                    </ul>
+                </div>
+
+                <div class="file-card">
+                    <h3>📄 src/image_export.py</h3>
+                    <p>이미지 저장 및 파일명 생성</p>
+                    <ul>
+                        <li><code>ImageExporter</code> 클래스</li>
+                        <li><code>export_all(structure, output_dir)</code></li>
+                        <li><code>sanitize_filename()</code></li>
+                        <li><code>create_short_paper_name()</code></li>
+                    </ul>
+                </div>
+
+                <div class="file-card">
+                    <h3>📄 src/markdown_gen.py</h3>
+                    <p>Obsidian 호환 마크다운 생성</p>
+                    <ul>
+                        <li><code>MarkdownGenerator</code> 클래스</li>
+                        <li><code>generate(structure, summaries, images)</code></li>
+                        <li><code>_generate_frontmatter()</code></li>
+                        <li><code>_generate_toc()</code></li>
+                        <li><code>_format_summary()</code></li>
+                        <li><code>save_markdown()</code></li>
+                    </ul>
+                </div>
+
+                <div class="file-card">
+                    <h3>📄 src/watcher.py</h3>
+                    <p>watchdog 기반 폴더 감시</p>
+                    <ul>
+                        <li><code>FolderWatcher</code> 클래스</li>
+                        <li><code>start(blocking)</code></li>
+                        <li><code>stop()</code></li>
+                        <li><code>process_existing()</code></li>
+                        <li><code>PDFHandler</code> - 이벤트 핸들러</li>
+                    </ul>
+                </div>
+
+                <div class="file-card">
+                    <h3>⚙️ config.yaml</h3>
+                    <p>애플리케이션 설정</p>
+                    <ul>
+                        <li><code>llm.provider</code>: "ollama"</li>
+                        <li><code>llm.model</code>: "qwen3:14b"</li>
+                        <li><code>llm.temperature</code>: 0.6</li>
+                        <li><code>llm.max_tokens</code>: 2048</li>
+                        <li><code>paths.watch_dir</code>: "target-pdf"</li>
+                        <li><code>paths.output_dir</code>: "output"</li>
+                        <li><code>output.summary_language</code>: "korean"</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- 데이터 흐름 -->
+        <div class="diagram-section">
+            <h2>📊 데이터 구조 흐름</h2>
+            <div class="mermaid">
+flowchart LR
+    subgraph INPUT
+        PDF["📄 PDF"]
+    end
+
+    subgraph EXTRACT["extractor.py"]
+        PS["<b>PaperStructure</b><br/>• title: str<br/>• markdown: str<br/>• sections: Section[]<br/>• figures: FigureInfo[]<br/>• tables: TableInfo[]<br/>• images: dict[str, bytes]"]
+    end
+
+    subgraph PROCESS["병렬 처리"]
+        IMG_PATHS["<b>image_paths</b><br/>dict[str, Path]<br/><small>{original: saved_path}</small>"]
+        SUMMARIES["<b>summaries</b><br/>dict[str, str]<br/><small>{section_title: summary}</small>"]
+        METADATA["<b>metadata</b><br/>dict<br/><small>{authors, journal, year}</small>"]
+    end
+
+    subgraph GENERATE["markdown_gen.py"]
+        MD_CONTENT["<b>markdown_content</b><br/>str<br/><small>Obsidian 호환 마크다운</small>"]
+    end
+
+    subgraph OUTPUT
+        FILES["📝 {paper}.md<br/>🖼️ assets/*.png"]
+    end
+
+    PDF --> PS
+    PS --> IMG_PATHS
+    PS --> SUMMARIES
+    PS --> METADATA
+    IMG_PATHS & SUMMARIES & METADATA --> MD_CONTENT
+    MD_CONTENT --> FILES
+
+    style SUMMARIES fill:#ffe066,stroke:#ffd43b
+    style METADATA fill:#ffe066,stroke:#ffd43b
+            </div>
+        </div>
+
+        <!-- CLI 사용법 -->
+        <div class="diagram-section">
+            <h2>💻 CLI 명령어</h2>
+            <div class="mermaid">
+flowchart TB
+    subgraph CLI["python main.py [옵션] [명령어]"]
+        direction TB
+
+        subgraph GLOBAL["전역 옵션"]
+            V["-v, --verbose<br/><small>상세 로그</small>"]
+            C["-c, --config<br/><small>설정 파일 경로</small>"]
+        end
+
+        subgraph COMMANDS["명령어"]
+            PROC["<b>process</b> &lt;pdf&gt;<br/><small>단일 PDF 처리</small>"]
+            PROCA["<b>process-all</b> [-f folder]<br/><small>폴더 내 모든 PDF</small>"]
+            WATCHCMD["<b>watch</b> [--process-existing]<br/><small>폴더 감시 모드</small>"]
+            INIT["<b>init</b> [-o output] [-f]<br/><small>설정 파일 생성</small>"]
+        end
+    end
+
+    subgraph EXAMPLES["사용 예시"]
+        EX1["python main.py process paper.pdf"]
+        EX2["python main.py process-all -f ./pdfs"]
+        EX3["python main.py watch --process-existing"]
+        EX4["python main.py -v process paper.pdf"]
+    end
+
+    PROC --> EX1
+    PROCA --> EX2
+    WATCHCMD --> EX3
+            </div>
+        </div>
+
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color" style="background: #ff6b6b;"></div>
+                <span>Ollama LLM 연동</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #ffe066;"></div>
+                <span>LLM 요약 처리</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #00d4ff;"></div>
+                <span>핵심 파이프라인</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #e3f2fd;"></div>
+                <span>병렬 처리 영역</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'default',
+            flowchart: {
+                useMaxWidth: true,
+                htmlLabels: true,
+                curve: 'basis'
+            },
+            sequence: {
+                useMaxWidth: true,
+                showSequenceNumbers: true
+            }
+        });
+    </script>
+</body>
+</html>

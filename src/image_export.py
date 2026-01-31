@@ -3,11 +3,13 @@
 import re
 from pathlib import Path
 
-from .extractor import PaperStructure
+from .extractor import PaperStructure, strip_html_tags
 
 
 def sanitize_filename(name: str, max_length: int = 30) -> str:
     """파일명으로 사용할 수 있도록 정리합니다."""
+    # HTML 태그 먼저 제거
+    name = strip_html_tags(name)
     # 파일명에 사용할 수 없는 문자 제거
     invalid_chars = '<>:"/\\|?*'
     for char in invalid_chars:
@@ -28,6 +30,7 @@ def sanitize_filename(name: str, max_length: int = 30) -> str:
 
 def create_short_paper_name(title: str, pdf_filename: str = "") -> str:
     """논문 제목 또는 파일명에서 짧은 이름을 생성합니다."""
+    title = strip_html_tags(title)
     # 1. 제목에서 괄호 안의 약어 찾기 (예: CLIP, GPT 등)
     match = re.search(r"\(([A-Z]{2,10})\)", title)
     if match:
