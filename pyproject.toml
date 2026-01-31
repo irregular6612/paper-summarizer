@@ -1,0 +1,18 @@
+[project]
+name = "paper-summary"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "ipykernel>=7.1.0",
+    "litellm>=1.80.0",
+    "marker-pdf>=1.10.1",
+    "pandas>=2.3.3",
+    "pyyaml>=6.0.3",
+    "surya-ocr",
+    "watchdog>=6.0.0",
+]
+
+[tool.uv.sources]
+surya-ocr = {git = "https://github.com/irregular6612/surya.git", branch="mps-version"}

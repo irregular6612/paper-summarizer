@@ -1,0 +1,15 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# personal and big files
+target-pdf/
+output/
+output-backup/
+
+# Virtual environments
+.venv

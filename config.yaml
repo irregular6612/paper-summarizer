@@ -1,0 +1,51 @@
+# Paper Summary Pipeline 설정
+
+llm:
+  # 사용할 LLM 제공자: ollama, openai, anthropic
+  provider: "ollama"
+  
+  # 모델명
+  # - ollama: llama3.2, mistral, gemma2, qwen3:14b, deepseek-r1:32b 등
+  # - openai: gpt-4o-mini, gpt-4o 등
+  # - anthropic: claude-3-haiku-20240307, claude-3-5-sonnet-20241022 등
+  model: "qwen3:14b"
+  
+  # API 키 (환경변수 참조 가능)
+  # api_key: "${OPENAI_API_KEY}"
+  
+  # Ollama base URL (기본: http://localhost:11434)
+  # base_url: "http://localhost:11434"
+  
+  temperature: 0.6  # Qwen3 thinking mode 권장값
+  max_tokens: 2048  # 요약에 충분한 크기
+  max_sections: 15  # 요약할 최대 섹션 수
+
+paths:
+  # PDF 파일을 넣을 폴더
+  watch_dir: "target-pdf"
+  
+  # 결과물 출력 폴더
+  output_dir: "output"
+  
+  # 처리 완료된 PDF 이동 폴더 (비워두면 이동 안함)
+  # processed_dir: "processed"
+
+markdown:
+  include_toc: true
+  include_frontmatter: true
+  include_figures: true
+  include_tables: true
+  
+  # 요약 스타일: blockquote 또는 callout
+  summary_style: "blockquote"
+  
+  assets_folder: "assets"
+  default_tags:
+    - paper
+
+output:
+  # 이미지 해상도 (DPI)
+  image_dpi: 150
+  
+  # 요약 출력 언어
+  summary_language: "korean"
